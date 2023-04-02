@@ -1,4 +1,4 @@
-import hashlib, shutil, os, sys, logging
+import hashlib, shutil, os, logging
 
 
 class FileManager:
@@ -8,10 +8,7 @@ class FileManager:
     Methods
     ----------------------
     update(location)
-        returns result of os.walk() through location as a list
-
-    compare(target, destination)
-        compares target structure list with destination and return a list of differences
+        returns result of os.walk() through location as a dictionary
 
     createDirectory(directory, location="")
         creates directory
@@ -35,11 +32,8 @@ class FileManager:
     removeFile(file, location)
         removes file from location
     """
-
-    def __init__(self):
-        self.system = os.name
-
-    def update(self, location):
+    @staticmethod
+    def update(location: str) -> dict:
 
         """Performs os.walk() through location and returns the result as a list
 
@@ -57,88 +51,17 @@ class FileManager:
         """
 
         # Set initial variables
-        updatedList = []
+        updated = {}
 
         # Perform os.walk() and append iterations to the updatedList
         for currentDirectory, directories, files in os.walk(os.path.abspath(str(location))):
-            updatedList.append([currentDirectory, directories, files])
+            updated[currentDirectory] = [directories, files]
 
         # Return the result of os.walk() as list
-        return updatedList
+        return updated
 
-    def compare(self, target, destination):
-
-        """Compares two lists and returns a list of missing items
-
-
-        Parameters:
-        ----------------------
-        target: list
-            a list of location, directories and files of the target structure
-
-        destination: list
-            a list of location, directories and files of the destination structure
-
-        Returns:
-        ----------------------
-        list
-            a list of items from target that are not present in destination
-        """
-
-        # Re/Set initial variables
-        difference = []
-        count = 0
-
-        # Check target directory structure
-        for currentDirectory, directories, files in target:
-
-            # IndexError Workaround, target has more elements than destination. Assume all to copy/remove
-            if (count > len(destination) - 1):
-                difDirectories = directories
-                difFiles = files
-                difference.append([currentDirectory, difDirectories, difFiles])
-                continue
-
-            # Re/Set variables for current iteration
-            difDirectories = []
-            difFiles = []
-
-            # Check for directories in target not present in destination, and append to list
-            for directory in directories:
-
-                if (not directory in destination[count][1]):
-                    difDirectories.append(directory)
-
-            # Check for files in target not present in destination,
-            # Compare files present in both target and destination and append the difference to list
-            for file in files:
-
-                # If the file is not present in destination directory
-                if (not file in destination[count][2]):
-
-                    # Add file to the list
-                    difFiles.append(file)
-
-                # If the file is present in destination directory
-                else:
-
-                    # Create full path to the both files
-                    currentTarget = os.path.join(os.path.abspath(currentDirectory), file)
-                    currentDestination = os.path.join(os.path.abspath(destination[count][0]), file)
-
-                    # Compare files and append to the list if different
-                    if (not self.compareFiles(currentTarget, currentDestination)):
-                        difFiles.append(file)
-
-            # Append current directory structure to the full list of differences
-            difference.append([currentDirectory, difDirectories, difFiles])
-
-            count += 1
-
-        # Return a list of differences with format [[location: str, directories: list, files: list]...]
-        return difference
-
-    def createDirectory(self, directory, location=""):
+    @staticmethod
+    def createDirectory(directory: str, location: str = ""):
 
         """Function for creating directory
 
@@ -167,8 +90,8 @@ class FileManager:
 
         # Create directory at location
         os.makedirs(path)
-
-    def compareFiles(self, file1, file2):
+    @staticmethod
+    def compareFiles(file1: str, file2: str) -> bool:
 
         """Compares two files and returns True if files are same, else False
 
@@ -193,12 +116,12 @@ class FileManager:
             return False
 
         # Compare hashes
-        if (not self.checkHashes(file1, file2)):
+        if (not FileManager.checkHashes(file1, file2)):
             return False
 
         return True
-
-    def copy(self, file, target, destination):
+    @staticmethod
+    def copy(file, target, destination):
 
         """Copies file from target to destination using shutil.copy2()
 
@@ -222,7 +145,8 @@ class FileManager:
         # Copy from target to destination
         shutil.copy2(targetPath, destinationPath)
 
-    def checkHashes(self, file1, file2):
+    @staticmethod
+    def checkHashes(file1: str, file2: str) -> bool:
 
         """Calculates MD5 hashes for file1 and file2 and returns boolean comparison
 
@@ -261,13 +185,19 @@ class FileManager:
         # Compare and return boolean result
         return hash1 == hash2
 
-    def exists(self, target):
+    @staticmethod
+    def exists(target: str) -> bool:
 
         """os.path.exists() override, checks if target exists and returns boolean"""
 
         return os.path.exists(target)
 
-    def removeDirectory(self, directory, location):
+    @staticmethod
+    def join(path, name):
+        return os.path.join(path, name)
+
+    @staticmethod
+    def removeDirectory(directory: str, location: str):
 
         """Removes directory from location using os.rmdir, shutil.rmtree if OSError is raised, else it raises an Exception**
 
@@ -300,7 +230,8 @@ class FileManager:
         except Exception as exception:
             raise
 
-    def removeFile(self, file, location):
+    @staticmethod
+    def removeFile(file: str, location: str):
 
         """os.remove() override, removes file from location
 
@@ -322,7 +253,7 @@ class FileManager:
 
 class Logger:
 
-    def getLogger(location):
+    def getLogger(location: str):
         # Join logfile path with filename for full path
         logPath = os.path.join(os.path.abspath(location), "absync.log")
 

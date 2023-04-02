@@ -1,10 +1,9 @@
 # AbSync
 
---------------------
-*Simple Python script for a scheduled synchronization of a directory*
+*Simple Python script for a scheduled synchronization*
+
 
 ## Usage:
-
 
 **_Unix / macOS:_**
 
@@ -20,6 +19,7 @@
 Running the script starts initial sync, creates directories if not found and schedules sync with given delay
 
 --------------------
+
 ## Installation:
 
 - Download and then install the latest release using:
@@ -28,13 +28,19 @@ Running the script starts initial sync, creates directories if not found and sch
 
 - Build your own with *python -m build*
 
+--------------------
+
 ## Requirements:
 
     schedule
 
+--------------------
+
 ## Description:
 
 It's really just a basic script, not great, but done with great hope.
+
+Basically, it makes a backup of a directory with a delay in seconds.
 
 First it performs os.walk() for the target and destination directories. It stores the results and then compares the lists.
 
@@ -43,7 +49,7 @@ If a file is present in both target and destination, it compares the files by ch
 
 By comparing destination list to the target, it gets files and directories not present in the target.
 
-The results are saved in copyList and removeList
+The results are saved in copyList and cleanList
 
 It iterates over both lists, first removing files and directories from destination(going last to first) and then
 creating directories and copying files from target to destination.
@@ -51,6 +57,8 @@ creating directories and copying files from target to destination.
 The whole process is found in *AbSync.sync()* function
 
 By calling the main function, it schedules the *AbSync.sync()* job using *AbSync.scheduleSync()* with **schedule** library
+
+--------------------
 
 ## Planned Changes:
 
@@ -60,15 +68,19 @@ By calling the main function, it schedules the *AbSync.sync()* job using *AbSync
     
     + File/directory renamed
       
-    + IndexError - find another way to unpack and manipulate lists
+    + ~~IndexError - find another way to unpack and manipulate lists~~
     
   * Add different methods to avoid hashing if not needed
+
+- Improve scheduling
   
 - General Code Improvements:
   
   * Exception/Error Handling
     
   * Logging
+  
+  * Tests 
   
 
 

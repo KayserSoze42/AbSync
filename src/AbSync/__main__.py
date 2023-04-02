@@ -1,4 +1,4 @@
-import schedule, sys, time
+import  sys
 from .AbSync import AbSync
 
 args = sys.argv
@@ -13,6 +13,4 @@ absync.sync()
 
 absync.scheduleSync()
 
-while True:
-    schedule.run_pending()
-    time.sleep(1)
+absync.run()

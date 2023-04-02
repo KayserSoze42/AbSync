@@ -1,4 +1,4 @@
-import sys, schedule, time
+import schedule, time
 from .AbSyncModules import FileManager, Logger
 
 
@@ -26,6 +26,9 @@ class AbSync:
     clean(items)
         remove directories and files from the items list
 
+    compare()
+        compares directory structures and updates AbSync.copyList and AbSync.cleanList
+
     copy(items)
         create directories and copy files from the items list
 
@@ -33,13 +36,19 @@ class AbSync:
         schedules AbSync.sync() at AbSync.interval seconds
 
     sync()
-        updates structures and performs AbSync.clean() and Absync.copy()
+        updates structures and performs AbSync.compare(), AbSync.clean() and AbSync.copy()
 
     updateStructures()
         updates target and destination directory structures 
     """
 
-    def __init__(self, target, destination, interval, logLocation):
+    copyList = []
+    cleanList = []
+
+    targetStructure: dict = {}
+    destinationStructure: dict = {}
+
+    def __init__(self, target: str, destination: str, interval: int, logLocation: str):
 
         print(">>AbSync v1.0")
 
@@ -49,14 +58,11 @@ class AbSync:
         self.interval = interval
         self.logLocation = logLocation
 
-        # Set FileManager
-        self.fileManager = FileManager()
-
         logCreated = False
 
         # Check if logfile directory exists, and create if needed
-        if (not self.fileManager.exists(self.logLocation)):
-            self.fileManager.createDirectory(self.logLocation)
+        if (not FileManager.exists(self.logLocation)):
+            FileManager.createDirectory(self.logLocation)
             logCreated = True
 
         # Set Logger
@@ -65,16 +71,13 @@ class AbSync:
         if (logCreated):
             self.logger.info("Created Directory: " + str(self.logLocation))
 
-        self.targetStructure = []
-        self.destinationStructure = []
-
         # Check if destination and target directories exists, and create if needed
-        if (not self.fileManager.exists(self.destination)):
-            self.fileManager.createDirectory(self.destination)
+        if (not FileManager.exists(self.destination)):
+            FileManager.createDirectory(self.destination)
             self.logger.info("Created Directory: " + str(self.destination))
 
-        if (not self.fileManager.exists(self.target)):
-            self.fileManager.createDirectory(self.target)
+        if (not FileManager.exists(self.target)):
+            FileManager.createDirectory(self.target)
             self.logger.info("Created Directory: " + str(self.target))
 
         # Log RunInfo
@@ -82,6 +85,122 @@ class AbSync:
         self.logger.info("Destination Folder: " + str(self.destination))
         self.logger.info("Sync Interval: " + str(self.interval))
         self.logger.info("Logs Location: " + str(self.logLocation))
+
+    def compare(self):
+
+        """Comparison Method
+
+        Compares target and destination structure for differences
+
+        Directories to be created and files to be copied are stored in AbSync.copyList
+        Directories and files to be removed are stored in AbSync.cleanList
+        """
+
+        # Get a list of paths from target and destination directory structures
+        targetPaths = list(self.targetStructure.keys())
+        destinationPaths = list(self.destinationStructure.keys())
+
+        # Re/Set initial values
+        self.copyList = []
+        self.cleanList = []
+
+        # For paths in target directories
+        for path in targetPaths:
+
+            # Set initial values
+            copyDirs = []
+            copyFiles = []
+
+            # Create destination path from current path
+            currentDestinationPath = path.replace(self.target, self.destination)
+
+            # If path exists in destination directory
+            if currentDestinationPath in destinationPaths:
+
+                # Optimization attempt
+                sameContent = True
+
+                # For all directories and files in current path
+                # Check if directory exists
+                for dir in self.targetStructure[path][0]:
+
+                    # If directory is present at both target and destination, continue
+                    if dir in self.destinationStructure[currentDestinationPath][0]:
+                        continue
+
+                    # Else, mark it for creation
+                    else:
+                        sameContent = False
+                        copyDirs.append(dir)
+
+                # Check if file exists
+                for file in self.targetStructure[path][1]:
+
+                    # Create target and destination full paths
+                    fileTarget = FileManager.join(path, file)
+                    fileDestination = FileManager.join(currentDestinationPath, file)
+
+                    # If file is present at both target and destination, compare them
+                    if file in self.destinationStructure[currentDestinationPath][1]:
+
+                        # If both files compare to same, continue
+                        if FileManager.compareFiles(fileTarget, fileDestination):
+                            continue
+
+                        # Else, mark it for copying
+                        else:
+                            sameContent = False
+                            copyFiles.append(file)
+
+                    # If file is not present, add it to the list
+                    else:
+
+                        copyFiles.append(file)
+
+                # Optimization attempt
+                if sameContent and self.targetStructure[path] == self.destinationStructure[currentDestinationPath]:
+                    destinationPaths.pop(destinationPaths.index(currentDestinationPath))
+
+            # Else, if target path is not present at destination
+            else:
+
+                # Add path and all content to the copy list
+                self.copyList.append([path, self.targetStructure[path][0], self.targetStructure[path][1]])
+                continue
+
+            # Add directories and files from copyDirs and copyFiles to copyList
+            self.copyList.append([path, copyDirs, copyFiles])
+
+        # For paths in destination directory
+        for path in destinationPaths:
+
+            # Set initial values
+            cleanDirs = []
+            cleanFiles = []
+
+            # Create destination path from current path
+            currentTargetPath = path.replace(self.destination, self.target)
+
+            # Previous IndexError Fix/Workaround
+            if not currentTargetPath in targetPaths:
+                continue
+
+            # Check for extra directories
+            for dir in self.destinationStructure[path][0]:
+
+                if not dir in self.targetStructure[currentTargetPath][0]:
+
+                    cleanDirs.append(dir)
+
+            # Check for extra files
+            for file in self.destinationStructure[path][1]:
+
+                if not file in self.targetStructure[currentTargetPath][1]:
+
+                    cleanFiles.append(file)
+
+            # Add paths, directories and files to the clean list
+            self.cleanList.append([path, cleanDirs, cleanFiles])
 
     def scheduleSync(self):
 
@@ -91,7 +210,7 @@ class AbSync:
 
     def sync(self):
 
-        """AbSync Synchronization Function
+        """AbSync Synchronization Method
 
         Updates directory structure for self.target and self.destination
         
@@ -104,23 +223,25 @@ class AbSync:
 
         self.updateStructures()
 
-        copyList = self.fileManager.compare(self.targetStructure, self.destinationStructure)
-        removeList = self.fileManager.compare(self.destinationStructure, self.targetStructure)
+        self.compare()
 
-        if (len(removeList) > 0):
-            self.clean(removeList[::-1])
+        if (len(self.cleanList) > 0):
+            self.clean(self.cleanList[::-1])
 
-        if (len(copyList) > 0):
-            self.copy(copyList)
+        if (len(self.copyList) > 0):
+            self.copy(self.copyList)
 
         self.logger.info("Completed Sync")
 
-    def clean(self, items):
+    def clean(self, items: list):
 
-        """Clean-up function
+        """Clean-up Method
 
         Removes directories and files from items list
         """
+
+        removedDirs = 0
+        removedFiles = 0
 
         for currentDirectory, directories, files in items:
 
@@ -129,20 +250,27 @@ class AbSync:
 
             # Remove all directories from the list
             for directory in directories:
-                self.fileManager.removeDirectory(directory, destinationDirectory)
+                FileManager.removeDirectory(directory, destinationDirectory)
                 self.logger.info("Removed Directory: " + str(directory) + " From: " + str(destinationDirectory))
+                removedDirs+=1
 
             # Remove all files from the list
             for file in files:
-                self.fileManager.removeFile(file, destinationDirectory)
+                FileManager.removeFile(file, destinationDirectory)
                 self.logger.info("Removed File: " + str(file) + " From: " + str(destinationDirectory))
+                removedFiles+=1
 
-    def copy(self, items):
+        self.logger.info("Removed " + str(removedDirs) + " Directory/ies, And " + str(removedFiles) + " File(s)")
 
-        """Copying function
+    def copy(self, items: list):
+
+        """Copying Method
 
         Creates directories and copies files from items list
         """
+
+        createdDirs = 0
+        copiedFiles = 0
 
         for currentDirectory, directories, files in items:
 
@@ -151,18 +279,32 @@ class AbSync:
 
             # Create all directories from the list
             for directory in directories:
-                self.fileManager.createDirectory(directory, destinationDirectory)
+                FileManager.createDirectory(directory, destinationDirectory)
                 self.logger.info("Created Directory: " + str(directory) + " In: " + str(destinationDirectory))
+                createdDirs+=1
 
             # Copy all files from the list
             for file in files:
-                self.fileManager.copy(file, currentDirectory, destinationDirectory)
+                FileManager.copy(file, currentDirectory, destinationDirectory)
                 self.logger.info("Copied File: " + str(file) + " To: " + str(destinationDirectory))
+                copiedFiles+=1
+
+        if createdDirs > 0 or copiedFiles > 0:
+            self.logger.info("Created " + str(createdDirs) + " Directory/ies, And Copied " + str(copiedFiles) + " File(s)")
+
+
+    def run(self):
+
+        """Runs the scheduled sync until interrupted"""
+
+        while True:
+            schedule.run_pending()
+            time.sleep(1)
 
     def updateStructures(self):
 
         """Updates target and destination directory structure"""
 
-        self.targetStructure = self.fileManager.update(self.target)
-        self.destinationStructure = self.fileManager.update(self.destination)
+        self.targetStructure = FileManager.update(self.target)
+        self.destinationStructure = FileManager.update(self.destination)
 

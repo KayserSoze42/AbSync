@@ -53,8 +53,6 @@ class AbSync:
 
     def __init__(self, target: str, destination: str, interval: int, logLocation: str):
 
-        print(">>AbSync v1.0")
-
         # Initialize values
         self.target = FileManager.absPath(target)
         self.destination = FileManager.absPath(destination)

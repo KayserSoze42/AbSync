@@ -8,7 +8,7 @@ description = (path / "README.md").read_text(encoding="utf-8")
 setup(
 
     name="AbSync",
-    version="1.1.0",
+    version="1.1.1",
     description="Simple Python Sync Scheduler",
     url="https://github.com/KayserSoze42/AbSync",
 

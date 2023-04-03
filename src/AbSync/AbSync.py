@@ -38,8 +38,11 @@ class AbSync:
     sync()
         updates structures and performs AbSync.compare(), AbSync.clean() and AbSync.copy()
 
+    run()
+        runs the schedule.run_pending() in a while True loop**
+
     updateStructures()
-        updates target and destination directory structures 
+        updates target and destination directory structures
     """
 
     copyList = []
@@ -53,10 +56,10 @@ class AbSync:
         print(">>AbSync v1.0")
 
         # Initialize values
-        self.target = target
-        self.destination = destination
+        self.target = FileManager.absPath(target)
+        self.destination = FileManager.absPath(destination)
         self.interval = interval
-        self.logLocation = logLocation
+        self.logLocation = FileManager.absPath(logLocation)
 
         logCreated = False
 
@@ -85,6 +88,36 @@ class AbSync:
         self.logger.info("Destination Folder: " + str(self.destination))
         self.logger.info("Sync Interval: " + str(self.interval))
         self.logger.info("Logs Location: " + str(self.logLocation))
+
+    def clean(self, items: list):
+
+        """Clean-up Method
+
+        Removes directories and files from items list
+        """
+
+        # Set log counters
+        removedDirs = 0
+        removedFiles = 0
+
+        for currentDirectory, directories, files in items:
+
+            # Create full path to current destination directory
+            destinationDirectory = currentDirectory.replace(self.target, self.destination)
+
+            # Remove all directories from the list
+            for directory in directories:
+                FileManager.removeDirectory(directory, destinationDirectory)
+                self.logger.info("Removed Directory: " + str(directory) + " From: " + str(destinationDirectory))
+                removedDirs+=1
+
+            # Remove all files from the list
+            for file in files:
+                FileManager.removeFile(file, destinationDirectory)
+                self.logger.info("Removed File: " + str(file) + " From: " + str(destinationDirectory))
+                removedFiles+=1
+
+        self.logger.info("Removed " + str(removedDirs) + " Directory/ies, And " + str(removedFiles) + " File(s)")
 
     def compare(self):
 
@@ -202,66 +235,6 @@ class AbSync:
             # Add paths, directories and files to the clean list
             self.cleanList.append([path, cleanDirs, cleanFiles])
 
-    def scheduleSync(self):
-
-        """Schedule AbSync.sync() at self.interval seconds"""
-
-        schedule.every(self.interval).seconds.do(self.sync)
-
-    def sync(self):
-
-        """AbSync Synchronization Method
-
-        Updates directory structure for self.target and self.destination
-        
-        Checks for differences and stores them in copyList and removeList
-        
-        Removes directories and files from removeList
-
-        Creates directories and copies files from copyList
-        """
-
-        self.updateStructures()
-
-        self.compare()
-
-        if (len(self.cleanList) > 0):
-            self.clean(self.cleanList[::-1])
-
-        if (len(self.copyList) > 0):
-            self.copy(self.copyList)
-
-        self.logger.info("Completed Sync")
-
-    def clean(self, items: list):
-
-        """Clean-up Method
-
-        Removes directories and files from items list
-        """
-
-        removedDirs = 0
-        removedFiles = 0
-
-        for currentDirectory, directories, files in items:
-
-            # Create full path to current destination directory
-            destinationDirectory = currentDirectory.replace(self.target, self.destination)
-
-            # Remove all directories from the list
-            for directory in directories:
-                FileManager.removeDirectory(directory, destinationDirectory)
-                self.logger.info("Removed Directory: " + str(directory) + " From: " + str(destinationDirectory))
-                removedDirs+=1
-
-            # Remove all files from the list
-            for file in files:
-                FileManager.removeFile(file, destinationDirectory)
-                self.logger.info("Removed File: " + str(file) + " From: " + str(destinationDirectory))
-                removedFiles+=1
-
-        self.logger.info("Removed " + str(removedDirs) + " Directory/ies, And " + str(removedFiles) + " File(s)")
-
     def copy(self, items: list):
 
         """Copying Method
@@ -269,6 +242,7 @@ class AbSync:
         Creates directories and copies files from items list
         """
 
+        # Set log counters
         createdDirs = 0
         copiedFiles = 0
 
@@ -292,6 +266,36 @@ class AbSync:
         if createdDirs > 0 or copiedFiles > 0:
             self.logger.info("Created " + str(createdDirs) + " Directory/ies, And Copied " + str(copiedFiles) + " File(s)")
 
+    def scheduleSync(self):
+
+        """Schedule AbSync.sync() at self.interval seconds"""
+
+        schedule.every(self.interval).seconds.do(self.sync)
+
+    def sync(self):
+
+        """AbSync Synchronization Method
+
+        Updates directory structure for AbSync.target and AbSync.destination
+        
+        Checks for differences and stores them in AbSync.copyList and AbSync.cleanList
+        
+        Removes directories and files from cleanList
+
+        Creates directories and copies files from copyList
+        """
+
+        self.updateStructures()
+
+        self.compare()
+
+        if (len(self.cleanList) > 0):
+            self.clean(self.cleanList[::-1])
+
+        if (len(self.copyList) > 0):
+            self.copy(self.copyList)
+
+        self.logger.info("Completed Sync")
 
     def run(self):
 

@@ -238,32 +238,32 @@ class FileManager:
         # Remove file
         os.remove(path)
 
-        @staticmethod
-        def update(location: str) -> dict:
-            """Performs os.walk() through location and returns the result as a dictionary
+    @staticmethod
+    def update(location: str) -> dict:
+        """Performs os.walk() through location and returns the result as a dictionary
 
 
-            Parameters:
-            ----------------------
-            location: str
-                target path, passed to os.walk()
+        Parameters:
+        ----------------------
+        location: str
+            target path, passed to os.walk()
 
 
-            Returns:
-            ----------------------
-            dict
-                a dictionary with a result of os.walk() in a 3-tuple format
-            """
+        Returns:
+        ----------------------
+        dict
+            a dictionary with a result of os.walk() in a 3-tuple format
+        """
 
-            # Set initial variables
-            updated = {}
+        # Set initial variables
+        updated = {}
 
-            # Perform os.walk() and append iterations to the updatedList
-            for currentDirectory, directories, files in os.walk(os.path.abspath(str(location))):
-                updated[currentDirectory] = [directories, files]
+        # Perform os.walk() and append iterations to the updatedList
+        for currentDirectory, directories, files in os.walk(os.path.abspath(str(location))):
+            updated[currentDirectory] = [directories, files]
 
-            # Return the result of os.walk() as list
-            return updated
+        # Return the result of os.walk() as list
+        return updated
 
 
 class Logger:

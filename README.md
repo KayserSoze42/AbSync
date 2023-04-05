@@ -64,15 +64,23 @@ By calling the main function, it schedules the *AbSync.sync()* job using *AbSync
 
 - Improve comparison:
   
-  * Find solution for cases: 
+  * Find solutions for cases: 
     
     + File/directory renamed
+    
+    + File/directory moved  
       
     + ~~IndexError - find another way to unpack and manipulate lists~~
     
   * Add different methods to avoid hashing if not needed
 
 - Improve scheduling
+
+- Threading / Multiprocessing (?)
+
+  * Computing hashes
+  
+  * Copying
   
 - General Code Improvements:
   
@@ -81,6 +89,8 @@ By calling the main function, it schedules the *AbSync.sync()* job using *AbSync
   * Logging
   
   * Tests 
+
+  * Packaging names and structure
   
 
 
